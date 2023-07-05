@@ -92,4 +92,4 @@ Please make sure to follow the existing code style and include tests for any new
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute the code as permitted by the license.
+This project is licensed under the [MIT License](../LICENSE). You are free to use, modify, and distribute the code as permitted by the license.
