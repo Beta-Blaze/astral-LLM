@@ -6,7 +6,8 @@ DETACHED_PROCESS = 0x00000008
 
 
 class ChatBotSettings:
-    def __init__(self, req_url: str, authorization: str, organization: str, model: str, max_tokens: int, temperature: float, stream: bool = True, personality: str = 'you are chat bot'):
+    def __init__(self, req_url: str, authorization: str, organization: str, model: str, max_tokens: int,
+                 temperature: float, stream: bool = True, personality: str = 'you are chat bot'):
         self.req_url = req_url
         self.authorization = authorization
         self.organization = organization
@@ -39,7 +40,7 @@ class ChatBot:
 
         if self.is_server_running():
             return
-        command = f"python -m llama_cpp.server --model {self.settings.model}"
+        command = f"python -m llama_cpp.server --model {self.settings.model}  --n_gpu_layers 35 --n_ctx 5000"
         subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          creationflags=DETACHED_PROCESS)
 
@@ -123,12 +124,30 @@ class ChatBot:
 
         self.history.append({"role": "user", "content": message})
 
+        print(self.history)
         response = openai.Completion.create(
             model=self.settings.model,
             prompt="### System: " + self.settings.personality +
                    "\n\n### History:\n" + self.get_history_string() +
                    "\n\n### Instructions:\n" + message + "\n\n### Response:\n",
-            max_tokens=100,
+            max_tokens=self.settings.max_tokens,
+            temperature=self.settings.temperature,
+            stop=["###"],
+        )
+        return response.choices[0].text
+
+    def perform_index_request_with_openAI(self, message):
+        import openai
+        openai.api_key = "sk-xxx"
+        openai.api_base = "http://localhost:8000/v1"
+
+        self.start_server()
+        print(message)
+        response = openai.ChatCompletion.create(
+            model=self.settings.model,
+            messages=[{"role": "user", "content": message}],
+            max_tokens=self.settings.max_tokens,
+            temperature=self.settings.temperature,
             stop=["###"],
         )
         return response.choices[0].text
@@ -140,22 +159,23 @@ class ChatBot:
 
         self.history.append({"role": "user", "content": message})
 
-        response = openai.Completion.create(
+        response = openai.ChatCompletion.create(
             model=self.settings.model,
-            prompt="### System: " + self.settings.personality +
-                   "\n\n### History:\n" + self.get_history_string() +
-                   "\n\n### Instructions:\n" + message + "\n\n### Response:\n",
-            max_tokens=100,
+            messages=self.history,
+            max_tokens=self.settings.max_tokens,
+            temperature=self.settings.temperature,
             stop=["\n"],
             stream=True
         )
-
         for result in response:
+            if not result['choices'][0]['delta'].get('content'):
+                continue
             if result['choices'][0]['finish_reason'] is not None:
                 break
-            yield result['choices'][0]['text']
+            yield result['choices'][0]['delta']['content']
 
     def chat(self, message, provider: ['openai', 'local'] = 'openai'):
+        self.start_server()
         if provider == 'openai':
             if self.settings.stream:
                 return self.perform_request_with_openAI_stream(message)
@@ -175,10 +195,11 @@ settings = ChatBotSettings(
     req_url='http://localhost:8000/v1/chat/completions',
     authorization='Bearer token',
     organization='LLC BetaBlaze&AlanShan',
-    model=r'E:\git\astral-LLM\backend\llama\models\ru-openllama-7b-v5-q5_K.bin',
-    max_tokens=1000,
+    model=r'E:\Develop\OpenBuddy\models\llama-13b-v5-q5_K.bin',
+    max_tokens=3488,
     temperature=0.6,
 )
+
 
 def demo():
     bot = ChatBot(settings)
@@ -187,7 +208,12 @@ def demo():
         message = input('>>> ')
         if message == 'exit':
             break
-        for response in bot.chat(message, provider='openai'):
+        for response in bot.chat("""Context information is below.
+---------------------
+1 часть Действие романа начинается в июле 1805 года, накануне войны, на петербургском светском вечере Анны Шерер, фрейлины вдовствующей императрицы. Здесь обсуждаются последние события текущего периода наполеоновских войн — убийство герцога Энгиенского, последние действия Наполеона в отношении итальянских Генуи и Лукки, российское посредничество в заключении им мира с Англией (миссия Новосильцева) — и появляются некоторые главные персонажи романа, в частности, Андрей Болконский и Пьер Безухов.
+---------------------
+Given the context information and not prior knowledge, answer the question: Какое последнее событие наполеоновских войн?
+Отвечай на русском""", provider='openai'):
             print(response, end='')
         print()
 
@@ -195,6 +221,4 @@ def demo():
 
 
 if __name__ == '__main__':
-    bot = ChatBot(settings)
-
-    print(bot.make_index(r'E:\git\astral-LLM\backend\README.md'))
+    demo()
