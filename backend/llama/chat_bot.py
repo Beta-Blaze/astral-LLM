@@ -1,3 +1,4 @@
+import pandas as pd
 import requests
 import json
 import subprocess
@@ -6,7 +7,8 @@ DETACHED_PROCESS = 0x00000008
 
 
 class ChatBotSettings:
-    def __init__(self, req_url: str, authorization: str, organization: str, model: str, max_tokens: int,
+    def __init__(self, req_url: str, authorization: str, organization: str, model: str,
+                 max_tokens: int,
                  temperature: float, stream: bool = True, personality: str = 'you are chat bot'):
         self.req_url = req_url
         self.authorization = authorization
@@ -40,7 +42,7 @@ class ChatBot:
 
         if self.is_server_running():
             return
-        command = f"python -m llama_cpp.server --model {self.settings.model}  --n_gpu_layers 35 --n_ctx 5000"
+        command = f"python -m llama_cpp.server --model {self.settings.model} --n_ctx 5000"
         subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          creationflags=DETACHED_PROCESS)
 
@@ -190,12 +192,37 @@ class ChatBot:
     def reset(self):
         self.history = []
 
+    def search_reviews(self, df, product_description, n=3):
+        self.start_server()
+
+        import openai
+        from openai.embeddings_utils import cosine_similarity
+
+        openai.api_key = "sk-xxx"
+        openai.api_base = "http://localhost:8000/v1"
+
+        embedding = self.create_index(product_description)
+        df['similarities'] = df.ada_embedding.apply(lambda x: cosine_similarity(x, embedding))
+        res = df.sort_values('similarities', ascending=False).head(n)
+        return res
+
+    def create_index(self, text):
+        self.start_server()
+
+        import openai
+
+        openai.api_key = "sk-xxx"
+        openai.api_base = "http://localhost:8000/v1"
+
+        text = text.replace("\n", " ")
+        return openai.Embedding.create(input=[text], model=self.settings.model)['data'][0]['embedding']
+
 
 settings = ChatBotSettings(
     req_url='http://localhost:8000/v1/chat/completions',
     authorization='Bearer token',
     organization='LLC BetaBlaze&AlanShan',
-    model=r'E:\Develop\OpenBuddy\models\llama-13b-v5-q5_K.bin',
+    model=r'E:\git\astral-LLM\backend\llama\models\ru-openllama-7b-v5-q5_K.bin',
     max_tokens=3488,
     temperature=0.6,
 )
@@ -221,4 +248,32 @@ Given the context information and not prior knowledge, answer the question: Ка
 
 
 if __name__ == '__main__':
-    demo()
+    bot = ChatBot(settings)
+
+    with open('./index/test.txt', 'r', encoding='utf-8') as f:
+        text = f.read()
+
+    # index = bot.create_index(text)
+
+    import pandas as pd
+    import numpy as np
+
+    # create a dataframe with the embeddings
+    df = pd.DataFrame()
+    df['combined'] = [text[i:i+300] for i in range(0, len(text), 300)]
+    df['ada_embedding'] = df.combined.apply(lambda x: bot.create_index(x))
+
+    df.to_csv('index/embedded.csv', index=False)
+
+    print('Index created')
+
+    df = pd.read_csv('./index/embedded.csv')
+    df['ada_embedding'] = df.ada_embedding.apply(eval).apply(np.array)
+
+    res = bot.search_reviews(df, 'sometimes described as the capital', n=3)
+
+    # get the most similar reviews
+    print(res)
+    print(res.combined.values[0])
+    print(res.combined.values[1])
+    print(res.combined.values[2])
