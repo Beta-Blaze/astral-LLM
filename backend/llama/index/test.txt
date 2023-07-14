@@ -1,1 +1,55 @@
-New York, often called New York City or NYC, is the most populous city in the United States. With a 2020 population of 8,804,190 distributed over 300.46 square miles (778.2 km2), New York City is the most densely populated major city in the United States and more than twice as populous as Los Angeles, the nation's second-largest city. New York City is located at the southern tip of New York State. It constitutes the geographical and demographic center of both the Northeast megalopolis and the New York metropolitan area, the largest metropolitan area in the U.S. by both population and urban area. With over 20.1 million people in its metropolitan statistical area and 23.5 million in its combined statistical area as of 2020, New York is one of the world's most populous megacities, and over 58 million people live within 250 mi (400 km) of the city. New York City is a global cultural, financial, entertainment, and media center with a significant influence on commerce, health care and life sciences, research, technology, education, politics, tourism, dining, art, fashion, and sports. Home to the headquarters of the United Nations, New York is an important center for international diplomacy, and is sometimes described as the capital of the world.Situated on one of the world's largest natural harbors and extending into the Atlantic Ocean, New York City comprises five boroughs, each of which is coextensive with a respective county of the state of New York. The five boroughs, which were created in 1898 when local governments were consolidated into a single municipal entity, are: Brooklyn (in Kings County), Queens (in Queens County), Manhattan (in New York County), The Bronx (in Bronx County), and Staten Island (in Richmond County).As of 2021, the New York metropolitan area is the largest metropolitan economy in the world with a gross metropolitan product of over $2.4 trillion. If the New York metropolitan area were a sovereign state, it would have the eighth-largest economy in the world. New York City is an established safe haven for global investors. New York is home to the highest number of billionaires, individuals of ultra-high net worth (greater than US$30 million), and millionaires of any city in the world.
+ 1С-ЭДО
+
+1С-ЭДО – сервис для организации электронного документооборота, который позволяет обмениваться юридически значимыми документами с контрагентами прямо из программы «1С:Предприятие» без использования других программ через оператора электронного документооборота (ЭДО). С подробной информацией вы можете ознакомиться в статье Общая информация.
+
+Услуги оператора электронного документооборота оказывает АО «Калуга Астрал» в соответствии с офертой, размещенной на официальном сайте оператора:  https://astral.ru. Факт начала использования указанного программного продукта свидетельствует о присоединении пользователя продукта к оферте.
+Что нужно для старта ЭДОLink to Что нужно для старта ЭДО
+
+Пользователи 1С уже имеют встроенный в учетную систему сервис 1С-ЭДО и могут начать ЭДО с контрагентами всего за несколько минут. Поддерживает ли ваша 1С сервис 1С-ЭДО вы можете проверить на сайте 1С-ЭДО.
+
+Для быстрого старта заранее позаботьтесь о подготовке рабочего места. Потребуется:
+
+    Одна из криптографических программ - КриптоПро CSP или ViPNet CSP.
+    КриптоПро CSP платная программа. Чтобы приобрести лицензию, заполните заявку на нашем официальном сайте.
+    Если вы хотите использовать программу ViPNet CSP, выберите версию программы и установите ее.
+    Усиленная квалифицированная электронная подпись (УКЭП). Если у вас нет УКЭП, заполните заявку для приобретения на нашем официальном сайте.
+
+Чтобы начать работу с ЭДО, бесплатно подключите организацию к 1С-ЭДО.
+Настройка ЭДО с контрагентамиLink to Настройка ЭДО с контрагентами
+
+Подписывать с контрагентами соглашение о переходе на ЭДО необязательно, все документы, подписанные в 1С-ЭДО являются юридически значимыми.
+
+Когда организация будет подключена, чтобы завершить настройку ЭДО и отправлять документы, необходимо обменяться приглашениями с контрагентом. Чем больше приглашений будет отправлено, тем больше организаций будет сотрудничать с вами по ЭДО. Поэтому в 1С-ЭДО предусмотрена массовая отправка приглашений.
+
+Сервис 1С-ЭДО автоматически определит состояние ваших контрагентов и отметит их соответствующими индикаторами:
+
+    Красный – в системе отсутствует информация о контрагенте. Данные контрагента можно заполнить вручную.
+    Желтый – контрагент имеет несколько учетных записей. Рекомендуется проверить данные и выбрать нужную запись.
+    Зеленый – контрагент имеет одну учетную запись. Приглашение будет отправлено на нее. При желании можно указать другую запись вручную.
+
+Вы можете обмениваться электронными документами с контрагентами, подключенными к любым операторам ЭДО. Обмен документами между операторами ЭДО обеспечивается технологией роуминга.
+
+Для настройки ЭДО с большинством таких контрагентов вам достаточно просто направить им приглашение. Роуминг будет настроен автоматически. В отдельных случаях потребуется настройка роуминга по заявке. Настройка роуминга бесплатна, исходящие отправки контрагентам, подключенным к другим операторам, оплачиваются по вашему стандартному тарифу.
+Обмен документамиLink to Обмен документами
+
+Когда обмен с контрагентом будет настроен, вы сможете обмениваться с ним документами:
+
+    отправлять и получать формализованные документы;
+    отправлять и получать несколько документов единым пакетом;
+    отправлять и получать произвольные документы.
+
+Вы можете менять форматы документов в зависимости от цели согласно действующим приказам ФНС.
+
+Также возможна настройка автоматической обработки документов в учете.
+Ошибки в документахLink to Ошибки в документах
+
+Если электронный документ выставлен ошибочно, его необходимо аннулировать.
+
+Если документооборот завершен и в отправленный документ необходимо внести исправления, отправьте исправленный электронный документ. Если были согласованы изменения стоимости, отправьте корректировочный электронный документ.
+
+Если после отправки документа обнаружена ошибка, его необходимо переформировать по инструкции Переформирование отправленного электронного документа.
+
+Если документ создан, но не отправлен из-за обнаруженной ошибки, его необходимо переформировать по инструкции Переформирование созданного электронного документа.
+Технические вопросыLink to Технические вопросы
+
+Если при работе с 1С-ЭДО у вас возникают вопросы, вы можете ознакомиться с частыми вопросами и их решениями.

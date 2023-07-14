@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import json
 import subprocess
+from text2vec import SentenceModel
 
 DETACHED_PROCESS = 0x00000008
 
@@ -152,7 +153,8 @@ class ChatBot:
             temperature=self.settings.temperature,
             stop=["###"],
         )
-        return response.choices[0].text
+        # print(response)
+        return response.choices[0].message.content
 
     def perform_request_with_openAI_stream(self, message):
         import openai
@@ -200,8 +202,8 @@ class ChatBot:
 
         openai.api_key = "sk-xxx"
         openai.api_base = "http://localhost:8000/v1"
-
-        embedding = self.create_index(product_description)
+        model = SentenceModel('shibing624/text2vec-base-multilingual')
+        embedding = model.encode(product_description)
         df['similarities'] = df.ada_embedding.apply(lambda x: cosine_similarity(x, embedding))
         res = df.sort_values('similarities', ascending=False).head(n)
         return res
@@ -260,8 +262,11 @@ if __name__ == '__main__':
 
     # create a dataframe with the embeddings
     df = pd.DataFrame()
-    df['combined'] = [text[i:i+300] for i in range(0, len(text), 300)]
-    df['ada_embedding'] = df.combined.apply(lambda x: bot.create_index(x))
+
+    model = SentenceModel('shibing624/text2vec-base-multilingual')
+
+    df['combined'] = [text[i:i + 300] for i in range(0, len(text), 300)]
+    df['ada_embedding'] = df.combined.apply(lambda x: model.encode(x).tolist())
 
     df.to_csv('index/embedded.csv', index=False)
 
@@ -270,10 +275,19 @@ if __name__ == '__main__':
     df = pd.read_csv('./index/embedded.csv')
     df['ada_embedding'] = df.ada_embedding.apply(eval).apply(np.array)
 
-    res = bot.search_reviews(df, 'sometimes described as the capital', n=3)
+    res = bot.search_reviews(df, 'Что означает красный статус контрагента?', n=3)
 
     # get the most similar reviews
     print(res)
     print(res.combined.values[0])
     print(res.combined.values[1])
     print(res.combined.values[2])
+
+    combined = res.combined.values[0] + res.combined.values[1] + res.combined.values[2]
+
+    question = 'Что означает красный статус контрагента?'
+
+    for response in bot.chat("""Context information is below. 
+---------------------""" + combined + """---------------------
+Given the context information and not prior knowledge, answer the question: """ + question):
+        print(response, end='')
