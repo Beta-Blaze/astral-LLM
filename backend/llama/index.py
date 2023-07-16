@@ -1,138 +1,134 @@
-from typing import Optional, List, Mapping, Any
+import os
 
-from langchain.embeddings import HuggingFaceEmbeddings
-from llama_index import (
-    ServiceContext,
-    SimpleDirectoryReader,
-    LangchainEmbedding,
-    VectorStoreIndex,
-    ListIndex, VectorStoreIndex, StorageContext, load_index_from_storage, LLMPredictor, PromptHelper
-)
-from llama_index.llms import CustomLLM, CompletionResponse, LLMMetadata, CompletionResponseGen
-from llama_index.node_parser import SimpleNodeParser
-from llama_index.storage.docstore import SimpleDocumentStore
+import numpy as np
+import pandas as pd
+from openai.embeddings_utils import cosine_similarity
 
 from chat_bot import ChatBot, ChatBotSettings
-
-# set context window size
-context_window = 2048
-
-# store the pipeline/model outisde of the LLM class to avoid memory issues
-model_name = r"E:\Develop\OpenBuddy\models\llama-13b-v5-q5_K.bin"
+from text2vec import SentenceModel
 
 
-class OurLLM(CustomLLM):
+class SimpleDocumentStore:
     def __init__(self):
-        super().__init__()
-        settings = ChatBotSettings(
-            req_url='http://localhost:8000/v1/chat/completions',
-            authorization='Bearer token',
-            organization='LLC BetaBlaze&AlanShan',
-            model=r'E:\Develop\OpenBuddy\models\llama-13b-v5-q5_K.bin',
-            max_tokens=3000,
-            temperature=0.6,
-            stream=False
-        )
-        self.bot = ChatBot(settings)
+        self.documents = []
 
-    @property
-    def metadata(self) -> LLMMetadata:
-        """Get LLM metadata."""
-        return LLMMetadata(
-            context_window=context_window, num_output=num_output
-        )
+    def add_documents(self, documents):
+        self.documents.append(documents)
 
-    def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
-        text = self.bot.perform_index_request_with_openAI(prompt)
-        print("Complete called")
-        return CompletionResponse(text=text)
+    def get_documents(self):
+        return self.documents
 
-    def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
-        raise NotImplementedError()
+    def __len__(self):
+        return len(self.documents)
 
-    def _identifying_params(self):
-        return {"name_of_model": "dolly-v2-3b"}
+    def __getitem__(self, index):
+        return self.documents[index]
 
-    def _llm_type(self):
-        return "custom"
+    def __iter__(self):
+        return iter(self.documents)
 
-    def _call(self, prompt, stop=None):
-        text = self.bot.perform_index_request_with_openAI(prompt)
-        print("Complete called")
-        return text
+    def is_empty(self):
+        return len(self.documents) == 0
 
 
-# define our LLM
-llm = OurLLM()
-
-# service_context = ServiceContext.from_defaults(
-#     llm=llm,
-#     chunk_size=1024
-# )
-
-# Load the your data
-# documents = SimpleDirectoryReader(r"E:\Develop\OpenBuddy\test").load_data()
-# index = VectorStoreIndex.from_documents(documents)
-# index.set_index_id("testindex")
-# index.storage_context.persist(r"E:\Develop\OpenBuddy\storage")
+class EmbeddingSettings:
+    def __init__(self, chunk_size: int = 300, output_size: int = 3,
+                 model_name: str = "shibing624/text2vec-base-multilingual",
+                 save_path: str = "./index"):
+        self.chunk_size = chunk_size
+        self.output_size = output_size
+        self.save_path = save_path
+        self.model_name = model_name
 
 
-# # rebuild storage context
-# storage_context = StorageContext.from_defaults(persist_dir=r"E:\Develop\OpenBuddy\storage")
-# # # load index
-# index = load_index_from_storage(storage_context, index_id="testindex", service_context=service_context)
-# #
-# # # Query and print response
-# query_engine = index.as_query_engine(
-#     similarity_top_k=3,
-#     vector_store_query_mode="default",
-#     alpha=None,
-#     doc_ids=None,
-# )
-# response = query_engine.query("ffffffffffffff?")
-# print(response)
+class EmbeddingIndex:
+    def __init__(self, settings: EmbeddingSettings, llm: ChatBot):
+        self.settings: EmbeddingSettings = settings
+        self.llm: ChatBot = llm
+        self.index: pd.DataFrame = pd.DataFrame()
+        self.docstore: SimpleDocumentStore = SimpleDocumentStore()
+        self.query_engine: ChatBot.chat = llm.chat
+        self.embed_model: SentenceModel = SentenceModel(self.settings.model_name)
+
+    def add_documents(self, documents_path: str):
+        if not os.path.exists(documents_path):
+            return
+        with open(documents_path, "r", encoding="utf-8") as f:
+            document = f.read()
+            self.docstore.add_documents(document)
+
+    def read_index(self):
+        if os.path.exists(self.settings.save_path + "/embedded.csv"):
+            self.index = pd.read_csv(self.settings.save_path + "/embedded.csv")
+            self.index['embedded'] = self.index.embedded.apply(eval).apply(np.array)
+        else:
+            self.create_index()
+
+    def create_index(self):
+        if self.docstore.is_empty():
+            return
+
+        self.index = pd.DataFrame()
+
+        temp = []
+        for text in self.docstore:
+            temp.extend([text[i:self.settings.chunk_size + i]
+                         for i in range(0, len(text), self.settings.chunk_size)])
+
+        self.index["combined"] = temp
+
+        self.index["embedded"] = self.index.combined.apply(
+            lambda x: self.embed_model.encode(x).tolist())
+
+        self.index.to_csv(self.settings.save_path + "/embedded.csv", index=False)
+
+    def search(self, query: str) -> str:
+        query_embedding = self.embed_model.encode(query)
+
+        self.index['similarities'] = self.index.embedded.apply(
+            lambda x: cosine_similarity(x, query_embedding))
+
+        res = self.index.sort_values(by='similarities', ascending=False) \
+            .head(self.settings.output_size)
+
+        string = ""
+
+        for i, row in res.iterrows():
+            string += row.combined + "\n"
+
+        return string
+
+    def query(self, query: str):
+        data = self.search(query)
+
+        # print(data)
+
+        print("Answer:")
+
+        question = f"""Context information is below.
+        ----- {data} -----
+        Given the context information and not prior knowledge, answer the question in Russian: {query}
+        
+        """
+
+        for response in self.query_engine(question):
+            print(response, end="")
 
 
-# reader = SimpleDirectoryReader(r"E:\Develop\OpenBuddy\test")
-# documents = reader.load_data()
-#
-# nodes = SimpleNodeParser().get_nodes_from_documents(documents)
-#
-# docstore = SimpleDocumentStore()
-# docstore.add_documents(nodes)
-#
-# storage_context = StorageContext.from_defaults(docstore=docstore)
-# vector_index = VectorStoreIndex(nodes, storage_context=storage_context,
-#                                 service_context=service_context)
-#
-# query_engine = vector_index.as_query_engine()
-# response = query_engine.query("What did the author do after his time at NYC?")
-#
-# print(response)
+if __name__ == "__main__":
+    e_settings = EmbeddingSettings()
+    s_settings = ChatBotSettings(
+        req_url='http://localhost:8000/v1/chat/completions',
+        authorization='Bearer token',
+        organization='LLC BetaBlaze&AlanShan',
+        model=r'E:\git\astral-LLM\backend\llama\models\ru-openllama-7b-v5-q5_K.bin',
+        max_tokens=3488,
+        temperature=0.6,
+    )
 
-
-max_input_size = 512
-num_output = 200
-max_chunk_overlap = 0
-chunk_size_limit = 100
-
-llm_predictor = LLMPredictor(llm=OurLLM())
-
-embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name='shibing624/text2vec-base-multilingual'))
-# prompt_helper = PromptHelper(max_input_size, num_output, max_chunk_overlap, chunk_size_limit=chunk_size_limit)
-service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor, embed_model=embed_model)
-
-documents = SimpleDirectoryReader(r'E:\Develop\OpenBuddy\test').load_data()
-index = VectorStoreIndex.from_documents(documents, service_context=service_context)
-index.storage_context.persist(r'E:\Develop\OpenBuddy\storage_12')
-
-# LOAD INDEX FROM STORAGE
-# storage_context = StorageContext.from_defaults(persist_dir=r"E:\Develop\OpenBuddy\storage3")
-# index = load_index_from_storage(storage_context, service_context=service_context)
-
-query_text = "Что означает красный статус контрагента?"
-response = index.as_query_engine(similarity_top_k=3,
-                                 vector_store_query_mode="default",
-                                 alpha=None,
-                                 doc_ids=None).query(query_text)
-print(response)
+    llm = ChatBot(s_settings)
+    index = EmbeddingIndex(e_settings, llm)
+    index.add_documents(r"E:\git\astral-LLM\backend\llama\index\test.txt")
+    index.create_index()
+    index.read_index()
+    index.query("Что означает красный статус контрагента?")
